@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login | Savore</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Poppins',sans-serif;}
+body{
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg,#1d1d1d,#3a3a3a);
+}
+.card{
+  width:min(460px,92vw);
+  background:#fff;
+  border-radius:16px;
+  padding:24px;
+  box-shadow:0 16px 40px rgba(0,0,0,0.22);
+}
+h1{font-size:28px;margin-bottom:8px;}
+p{color:#666;margin-bottom:18px;}
+input{
+  width:100%;
+  margin-bottom:10px;
+  padding:11px 12px;
+  border:1px solid #ddd;
+  border-radius:10px;
+}
+button{
+  width:100%;
+  border:none;
+  border-radius:10px;
+  padding:11px 12px;
+  cursor:pointer;
+  background:#111;
+  color:#fff;
+  font-weight:600;
+}
+.hint{margin-top:12px;font-size:13px;color:#777;}
+.link-row{
+  margin-top:10px;
+  display:flex;
+  justify-content:space-between;
+  font-size:14px;
+}
+a{color:#d86100;text-decoration:none;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Admin Login</h1>
+    <p>Login to manage restaurant foods.</p>
+    <input id="username" type="text" placeholder="Admin username">
+    <input id="password" type="password" placeholder="Admin password">
+    <button onclick="loginAdmin()">Login</button>
+    <div class="hint">Default: username <strong>admin</strong>, password <strong>admin123</strong></div>
+    <div class="link-row">
+      <a href="user-login.html">User Login</a>
+      <a href="admin-register.html">Create Admin Account</a>
+      <a href="index.html">Home</a>
+    </div>
+  </div>
+
+<script>
+const ADMIN_SESSION_KEY = "savoreAdminSession";
+const ADMIN_ACCOUNTS_KEY = "savoreAdminAccounts";
+
+function getAdminAccounts(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(ADMIN_ACCOUNTS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function loginAdmin(){
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const accounts = getAdminAccounts();
+  const matched = accounts.find(a=>a.username === username && a.password === password);
+
+  if(username === "admin" && password === "admin123"){
+    localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({username, loggedAt: Date.now()}));
+    window.location.href = "admin.html";
+    return;
+  }
+
+  if(matched){
+    localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify({username: matched.username, phone: matched.phone, loggedAt: Date.now()}));
+    window.location.href = "admin.html";
+    return;
+  }
+
+  alert("Invalid admin credentials.");
+}
+</script>
+</body>
+</html>

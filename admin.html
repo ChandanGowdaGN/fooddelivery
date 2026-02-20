@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel | Savore</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Poppins',sans-serif;}
+body{background:#f6f6f6;color:#222;}
+header{
+  background:#111;
+  color:#fff;
+  padding:14px 18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+header a{
+  color:#ffd7a0;
+  text-decoration:none;
+  margin-left:10px;
+}
+.wrap{
+  max-width:1100px;
+  margin:20px auto;
+  padding:0 16px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+}
+.panel{
+  background:#fff;
+  border-radius:14px;
+  padding:18px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.08);
+}
+h2{margin-bottom:12px;font-size:22px;}
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+input,select,textarea{
+  width:100%;
+  padding:10px 11px;
+  border:1px solid #ddd;
+  border-radius:10px;
+}
+.full{grid-column:1/-1;}
+button{
+  border:none;
+  border-radius:10px;
+  padding:10px 14px;
+  cursor:pointer;
+  background:#fc8019;
+  color:#fff;
+  font-weight:600;
+}
+.danger{background:#d63e3e;}
+.muted-btn{background:#666;}
+.subtle{font-size:13px;color:#666;margin:6px 0 10px;}
+.list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  max-height:520px;
+  overflow:auto;
+}
+.item{
+  border:1px solid #eee;
+  border-radius:10px;
+  padding:10px;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+}
+.item p{font-size:13px;color:#555;}
+@media(max-width:900px){
+  .wrap{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<header>
+  <strong>Savore Admin Panel</strong>
+  <div>
+    <a href="index.html">Go to User Home</a>
+    <a href="#" onclick="logoutAdmin()">Logout</a>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="panel">
+    <h2>Add Food Item</h2>
+    <p class="subtle">These items will appear in user home and menu automatically.</p>
+    <div class="grid">
+      <input id="name" class="full" type="text" placeholder="Food name (e.g. Cheese Burst Pizza)">
+      <input id="restaurant" type="text" placeholder="Restaurant name">
+      <input id="price" type="number" min="1" step="1" placeholder="Price in INR">
+      <select id="type">
+        <option value="veg">Veg</option>
+        <option value="non-veg">Non Veg</option>
+      </select>
+      <input id="rating" type="number" min="1" max="5" step="0.1" placeholder="Rating (1-5)">
+      <input id="image" class="full" type="text" placeholder="Image URL">
+      <textarea id="description" class="full" rows="3" placeholder="Food description (e.g. creamy malai marinade with charcoal flavor)"></textarea>
+      <input id="categories" class="full" type="text" placeholder="Categories comma-separated (pizza, burger, indian)">
+      <button class="full" id="saveBtn" onclick="saveItem()">Add Item</button>
+      <button class="full muted-btn" id="cancelEditBtn" onclick="cancelEdit()" style="display:none;">Cancel Edit</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Admin Added Items</h2>
+    <p class="subtle">Manage custom items added by admin/restaurants.</p>
+    <div class="list" id="list"></div>
+    <br>
+    <button class="danger" onclick="clearAll()">Delete All Admin Items</button>
+  </div>
+</div>
+
+<script>
+const ADMIN_ITEMS_KEY = "savoreAdminItems";
+const ADMIN_SESSION_KEY = "savoreAdminSession";
+let editingId = null;
+
+if(!localStorage.getItem(ADMIN_SESSION_KEY)){
+  window.location.href = "admin-login.html";
+}
+
+function getItems(){
+  try{
+    const parsed = JSON.parse(localStorage.getItem(ADMIN_ITEMS_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function saveItems(items){
+  localStorage.setItem(ADMIN_ITEMS_KEY, JSON.stringify(items));
+}
+
+function renderList(){
+  const items = getItems();
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  if(!items.length){
+    list.innerHTML = "<p class='subtle'>No admin items added yet.</p>";
+    return;
+  }
+
+  items.forEach(item=>{
+    const el = document.createElement("div");
+    el.className = "item";
+    el.innerHTML = `
+      <div>
+        <strong>${item.name}</strong>
+        <p>${item.restaurant} | ${item.type} | ${item.labels.join(", ")}</p>
+        <p>\u20B9${Number(item.price).toFixed(2)} | Rating ${Number(item.rating).toFixed(1)}</p>
+        ${item.description ? `<p>${item.description}</p>` : ""}
+      </div>
+      <div>
+        <button onclick="editItem(${item.id})">Edit</button>
+        <button class="danger" onclick="deleteItem(${item.id})">Delete</button>
+      </div>
+    `;
+    list.appendChild(el);
+  });
+}
+
+function setFormValues(item){
+  document.getElementById("name").value = item.name || "";
+  document.getElementById("restaurant").value = item.restaurant || "";
+  document.getElementById("price").value = item.price || "";
+  document.getElementById("type").value = item.type || "veg";
+  document.getElementById("rating").value = item.rating || 4;
+  document.getElementById("image").value = item.img || "";
+  document.getElementById("description").value = item.description || "";
+  document.getElementById("categories").value = (item.labels || []).join(", ");
+}
+
+function clearForm(){
+  document.querySelectorAll("input, textarea").forEach(i=>i.value = "");
+  document.getElementById("type").value = "veg";
+}
+
+function setEditMode(isEdit){
+  document.getElementById("saveBtn").textContent = isEdit ? "Update Item" : "Add Item";
+  document.getElementById("cancelEditBtn").style.display = isEdit ? "block" : "none";
+}
+
+function getFormPayload(){
+  const name = document.getElementById("name").value.trim();
+  const restaurant = document.getElementById("restaurant").value.trim() || "Partner Restaurant";
+  const price = Number(document.getElementById("price").value);
+  const type = document.getElementById("type").value;
+  const rating = Number(document.getElementById("rating").value || 4);
+  const image = document.getElementById("image").value.trim();
+  const description = document.getElementById("description").value.trim();
+  const categoriesRaw = document.getElementById("categories").value.trim();
+
+  if(!name || !price || !image){
+    alert("Name, price, and image URL are required.");
+    return null;
+  }
+
+  const labels = categoriesRaw
+    ? categoriesRaw.split(",").map(v=>v.trim().toLowerCase()).filter(Boolean)
+    : ["indian"];
+
+  return {
+    name,
+    restaurant,
+    price,
+    type,
+    img: image,
+    rating: Math.min(5, Math.max(1, rating)),
+    description,
+    labels
+  };
+}
+
+function saveItem(){
+  const payload = getFormPayload();
+  if(!payload) return;
+
+  const items = getItems();
+  if(editingId){
+    const idx = items.findIndex(item=>item.id === editingId);
+    if(idx === -1){
+      alert("Item not found for editing.");
+      return;
+    }
+    items[idx] = { ...items[idx], ...payload };
+  }else{
+    items.push({ id: Date.now(), ...payload });
+  }
+  saveItems(items);
+  renderList();
+  cancelEdit();
+}
+
+function editItem(id){
+  const item = getItems().find(i=>i.id === id);
+  if(!item) return;
+  editingId = id;
+  setFormValues(item);
+  setEditMode(true);
+}
+
+function cancelEdit(){
+  editingId = null;
+  clearForm();
+  setEditMode(false);
+}
+
+function deleteItem(id){
+  const items = getItems().filter(item=>item.id !== id);
+  saveItems(items);
+  renderList();
+}
+
+function clearAll(){
+  if(!confirm("Delete all admin-added items?")) return;
+  saveItems([]);
+  renderList();
+}
+
+function logoutAdmin(){
+  localStorage.removeItem(ADMIN_SESSION_KEY);
+  window.location.href = "admin-login.html";
+}
+
+renderList();
+</script>
+</body>
+</html>
